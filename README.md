@@ -9,12 +9,20 @@ Intended as a **portable RF audio source** for adjusting receive levels on repea
 ## Features
 
 - Stable sine wave tone output through AIOC USB audio — usable as a portable RF signal source
-- Adjustable tone frequency from 100 Hz to 3000 Hz
+- Adjustable tone frequency from 100 Hz to 3000 Hz, with a slider and an editable numeric entry field
 - Calibrated output level control with automatic Windows audio normalization
-- One-click PTT key/unkey via AIOC serial port (RTS/DTR)
-- Auto-detection of AIOC audio device and COM port
-- Clean tone start/stop with no audio pops or artifacts
-- Warns if Windows device volume is not at 100% and offers to normalize it
+- Multiple PTT methods selectable at runtime:
+  - **CM108 HID** with per-pin GPIO1–GPIO4 checkbox selection
+  - **Serial DTR** (default — matches default AIOC firmware's `DTR !RTS` trigger)
+  - **Serial RTS**
+  - **Serial RTS+DTR**
+- Auto-detection of the AIOC audio device, HID interface, and COM port by name / USB VID:PID
+- Automatic default GPIO pin selection based on detected firmware:
+  - **GPIO3** for default AIOC firmware (`1209:7388`)
+  - **GPIO1** for AllStar firmware (`0D8C:000C`)
+- In-app **Bessel Null Peak Deviation** reference table (1st and 2nd null for 1000 Hz / 1200 Hz tones)
+- Clean tone start/stop with a one-block fade to zero — no pops or artifacts
+- Warns if Windows device volume is not at 100% and offers to normalize it; original level restored on exit
 - Defaults to 1200 Hz for Bessel null deviation setup
 
 ---
@@ -34,14 +42,14 @@ Intended as a **portable RF audio source** for adjusting receive levels on repea
 **1. Clone the repository**
 
 ```bash
-git clone https://github.com/KJYNY/aioc-tone-gen.git
-cd aioc-tone-gen
+git clone https://github.com/KJ7NYE/AIOC-Tone-Gen.git
+cd AIOC-Tone-Gen
 ```
 
 **2. Install dependencies**
 
 ```bash
-pip install numpy sounddevice pyserial pycaw
+pip install -r requirements.txt
 ```
 
 > `tkinter` is included with standard Python on Windows. No separate install needed.
@@ -57,13 +65,20 @@ python main.py
 ## Usage
 
 1. Connect your AIOC to a USB port
-2. Launch the application
-3. Select your AIOC audio device from the **Audio Device** dropdown
-4. Select the AIOC COM port from the **COM Port** dropdown
-5. Adjust the **Frequency** slider to your desired tone (Hz)
-6. Adjust the **Volume** slider to your desired output level
-7. Click **Start Tone** — PTT will key automatically
-8. Click **Stop Tone** to end transmission and release PTT
+2. Launch the application — the AIOC audio device, HID interface, and COM port are auto-selected when detected
+3. Select your AIOC audio device from the **Audio Device** dropdown (should already be set)
+4. Choose a **PTT Method**:
+   - **Serial DTR** (default, works with stock AIOC firmware)
+   - **Serial RTS** or **Serial RTS+DTR** for custom firmware / other cables
+   - **CM108 HID** to key via the AIOC's HID interface directly
+5. If using **CM108 HID**: confirm the **HID Device** dropdown shows the AIOC and that the correct **GPIO pin** is checked (auto-selected based on VID:PID)
+6. If using a serial method: confirm the **COM Port** dropdown shows the AIOC
+7. Adjust the **Frequency** slider (or type into the entry field) to your desired tone (Hz)
+8. Adjust the **Volume** slider (or type into the entry field) to your desired output level
+9. Click **Start Tone** — PTT will key automatically
+10. Click **Stop Tone** to end transmission and release PTT
+
+> The **Bessel Null Peak Deviation** reference block at the top of the window shows the deviation each null corresponds to for 1000 Hz and 1200 Hz tones — no need to look up the math while you're calibrating.
 
 ---
 
@@ -137,7 +152,9 @@ On launch, the app reads the AIOC's Windows device volume. If it is not at 100%,
 | `numpy` | Sine wave generation |
 | `sounddevice` | Real-time audio streaming to AIOC device |
 | `pyserial` | PTT control via RTS/DTR on AIOC COM port |
-| `pycaw` | Windows audio device volume normalization |
+| `pycaw` | Windows audio endpoint volume management |
+| `comtypes` | COM support required by pycaw |
+| `hidapi` | CM108 HID PTT keying (GPIO pin control) |
 | `tkinter` | GUI (included with Python on Windows) |
 
 ---
@@ -152,6 +169,11 @@ This project is in early development. Core functionality is working. Contributio
 - Linux and macOS support
 - Sweep/chirp tone mode
 - AllStar/app_rpt audio level reference presets
+
+### Firmware Compatibility Notes
+
+- **Default AIOC firmware** (VID:PID `1209:7388`) — PTT triggers on `CM108 GPIO3` and serial `DTR !RTS`. The app's default `Serial DTR` method fires this trigger correctly. **Do not use `Serial RTS+DTR`** with default firmware — the `!RTS` half of the trigger requires RTS to be low, and asserting RTS will prevent PTT from keying.
+- **AllStar firmware** (VID:PID `0D8C:000C`) — Uses `CM108 GPIO1`. Select the **CM108 HID** method; the correct pin is auto-selected when the AllStar VID:PID is detected.
 
 ---
 
