@@ -1,0 +1,6 @@
+numpy
+sounddevice
+pyserial
+pycaw
+comtypes
+hidapi
